@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Install Qt + WebEngine
         run: |
@@ -81,8 +81,8 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - - name: Checkout code
+        uses: actions/checkout@v4.2.2
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
