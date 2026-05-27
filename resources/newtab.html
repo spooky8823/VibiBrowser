@@ -377,7 +377,6 @@ function ctxEdit(){
   const a=apps[ctxIdx];
   document.getElementById('appName').value=a.name;
   document.getElementById('appUrl').value=a.url;
-  document.getElementById('appIcon').value=a.icon||'';
   apps.splice(ctxIdx,1);save();render();
   openAddModal();
 }
