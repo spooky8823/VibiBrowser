@@ -93,6 +93,9 @@ body.dark .float-btn{background:rgba(50,30,90,0.9);}
 .vibi-promo{background:var(--sf);border:1px solid var(--br);border-radius:16px;padding:18px 22px;width:100%;}
 .vibi-promo h3{font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;color:var(--tx);margin-bottom:4px;}
 .vibi-promo p{font-size:12px;color:var(--tm);line-height:1.6;}
+.three-dot-btn{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:6px;border:none;background:var(--s2);color:var(--tm);font-size:14px;cursor:pointer;display:none;align-items:center;justify-content:center;line-height:1;padding:0;z-index:10;}
+.app-item:hover .three-dot-btn{display:flex;}
+.three-dot-btn:hover{background:var(--p);color:#fff;}
 /* Drag ghost */
 .dragging{opacity:.4;transform:scale(.95);}
 .perf-low *{transition:none !important;animation:none !important;}
@@ -104,7 +107,7 @@ body.dark .float-btn{background:rgba(50,30,90,0.9);}
 <body>
 <div class="nt-bg"><div class="nt-bg-v">V</div></div>
 <div class="float-btns">
-  <button class="float-btn" onclick="toggleDark()" id="themeBtn">🌙</button>
+  <button class="float-btn" onclick="toggleDark()" id="themeBtn">Dark Mode</button>
 </div>
 <div class="nt-inner">
   <div class="nt-greet" id="greeting">Welcome</div>
@@ -158,9 +161,9 @@ body.dark .float-btn{background:rgba(50,30,90,0.9);}
 
 <!-- Context menu -->
 <div class="ctx-menu" id="ctxMenu">
-  <div class="ctx-item" onclick="ctxOpen()">🌐 Open</div>
-  <div class="ctx-item" onclick="ctxEdit()">✏️ Edit</div>
-  <div class="ctx-item danger" onclick="ctxDelete()">🗑️ Remove</div>
+  <div class="ctx-item" onclick="ctxOpen()"> Open </div>
+  <div class="ctx-item" onclick="ctxEdit()"> Modifiy </div>
+  <div class="ctx-item danger" onclick="ctxDelete()"> Remove </div>
 </div>
 
 <script>
@@ -265,6 +268,11 @@ if(false){
 
     // Right click
     el.addEventListener('contextmenu',e=>{e.preventDefault();showCtx(e,i);});
+    const threeDot=document.createElement('button');
+    threeDot.className='three-dot-btn';
+    threeDot.textContent='⋮';
+    threeDot.addEventListener('click',e=>{e.stopPropagation();showCtx(e,i);});
+    el.appendChild(threeDot);
 
     // Drag
     el.addEventListener('dragstart',e=>{dragIdx=i;setTimeout(()=>el.classList.add('dragging'),0);});
