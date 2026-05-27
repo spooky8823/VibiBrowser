@@ -67,7 +67,9 @@ body.dark .se-select{background:rgba(34,21,69,0.95);color:var(--tx);}
 .fapp-name{font-size:10px;color:var(--tm);text-align:center;word-break:break-word;}
 .fapp-remove{position:absolute;top:-4px;right:-4px;width:18px;height:18px;border-radius:50%;background:#e81123;border:none;cursor:pointer;display:none;align-items:center;justify-content:center;font-size:10px;color:#fff;}
 .fapp:hover .fapp-remove{display:flex;}
-.folder-hint{font-size:11px;color:var(--tm);text-align:center;margin-top:12px;}
+.folder-hint{font-size:11px;color:var(--tm);text-align:center;margin-top:6px;}
+.folder-drop-zone{margin-top:14px;border:1.5px dashed rgba(123,92,240,.4);border-radius:12px;padding:12px;text-align:center;font-size:12px;color:var(--tm);transition:background .15s,border-color .15s;}
+.folder-drop-zone.drag-active{background:var(--pp);border-color:var(--p);color:var(--p);}
 /* Modals */
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center;}
 .modal.open{display:flex;}
@@ -142,7 +144,8 @@ body.dark .float-btn{background:rgba(50,30,90,0.9);}
       <button class="folder-close" onclick="closeFolder()">✕</button>
     </div>
     <div class="folder-grid" id="folderGrid"></div>
-    <div class="folder-hint">Double-click an app to remove it from folder</div>
+    <div class="folder-drop-zone" id="folderDropZone">⬖ Drag here to remove from folder</div>
+   <div class="folder-hint">or double-click an app to remove it</div>
   </div>
 </div>
 
@@ -328,14 +331,38 @@ function openFolder(i){
   document.getElementById('folderTitle').value=f.name;
   const grid=document.getElementById('folderGrid');
   grid.innerHTML=f.items.map((a,j)=>`
-    <div class="fapp" ondblclick="removeFromFolder(${j})" onclick="window.location.href='${a.url}'">
+    <div class="fapp" draggable="true" ondragstart="event.dataTransfer.setData('folderItemIdx','${j}')" ondblclick="removeFromFolder(${j})" onclick="window.location.href='${a.url}'">
       <div class="fapp-icon">${a.icon&&a.icon.length<=2?a.icon:`<img src="https://www.google.com/s2/favicons?domain=${(()=>{try{return new URL(a.url).hostname}catch{return ''}})()}&sz=64" style="width:28px;height:28px;border-radius:6px" onerror="this.parentNode.textContent='🌐'">`}</div>
       <div class="fapp-name">${a.name}</div>
+      <button class="three-dot-btn" onclick="event.stopPropagation();showFolderCtx(event,${j})" style="display:none;">⋮</button>
     </div>
   `).join('');
+  document.querySelectorAll('.fapp').forEach(el=>{
+    el.addEventListener('mouseenter',()=>el.querySelector('.three-dot-btn').style.display='flex');
+    el.addEventListener('mouseleave',()=>el.querySelector('.three-dot-btn').style.display='none');
+  });
   document.getElementById('folderOverlay').classList.add('open');
 }
 function closeFolder(){document.getElementById('folderOverlay').classList.remove('open');openFolderIdx=null;}
+
+function initFolderDropZone(){
+  const zone=document.getElementById('folderDropZone');
+  zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag-active');});
+  zone.addEventListener('dragleave',()=>zone.classList.remove('drag-active'));
+  zone.addEventListener('drop',e=>{
+    e.preventDefault();zone.classList.remove('drag-active');
+    const j=parseInt(e.dataTransfer.getData('folderItemIdx'));
+    if(isNaN(j)||openFolderIdx===null)return;
+    const f=apps[openFolderIdx];
+    const removed=f.items.splice(j,1)[0];
+    apps.splice(openFolderIdx+1,0,removed);
+    save();render();
+    if(f.items.length===0){closeFolder();}
+    else if(f.items.length===1){const last=f.items[0];apps.splice(openFolderIdx,1,last);closeFolder();}
+    else openFolder(openFolderIdx);
+  });
+}
+initFolderDropZone();
 document.getElementById('folderOverlay').addEventListener('click',closeFolder);
 function saveFolderName(){if(openFolderIdx!==null){apps[openFolderIdx].name=document.getElementById('folderTitle').value;save();render();}}
 function removeFromFolder(j){
@@ -377,7 +404,14 @@ function showCtx(e,i){
   ctxMenu.classList.add('open');
 }
 document.addEventListener('click',()=>ctxMenu.classList.remove('open'));
-function ctxOpen(){if(ctxIdx!==null&&!apps[ctxIdx].folder)window.location.href=apps[ctxIdx].url;}
+function ctxOpen(){
+  if(ctxMenu.dataset.mode==='folder'){
+    if(folderCtxIdx!==null)window.location.href=apps[openFolderIdx].items[folderCtxIdx].url;
+  } else {
+    if(ctxIdx!==null&&!apps[ctxIdx].folder)window.location.href=apps[ctxIdx].url;
+  }
+  ctxMenu.dataset.mode='';
+}
 function ctxEdit(){
   if(ctxIdx===null||apps[ctxIdx].folder)return;
   const a=apps[ctxIdx];
@@ -386,7 +420,31 @@ function ctxEdit(){
   apps.splice(ctxIdx,1);save();render();
   openAddModal();
 }
-function ctxDelete(){if(ctxIdx!==null){apps.splice(ctxIdx,1);save();render();}}
+function ctxDelete(){
+  if(ctxMenu.dataset.mode==='folder'){
+    if(folderCtxIdx!==null&&openFolderIdx!==null){
+      const f=apps[openFolderIdx];
+      f.items.splice(folderCtxIdx,1);
+      save();render();
+      if(f.items.length===0)closeFolder();
+      else if(f.items.length===1){const last=f.items[0];apps.splice(openFolderIdx,1,last);closeFolder();}
+      else openFolder(openFolderIdx);
+    }
+  } else {
+    if(ctxIdx!==null){apps.splice(ctxIdx,1);save();render();}
+  }
+  ctxMenu.dataset.mode='';
+}
+
+let folderCtxIdx=null;
+function showFolderCtx(e,j){
+  e.preventDefault();
+  folderCtxIdx=j;
+  ctxMenu.style.left=Math.min(e.clientX,window.innerWidth-180)+'px';
+  ctxMenu.style.top=Math.min(e.clientY,window.innerHeight-150)+'px';
+  ctxMenu.dataset.mode='folder';
+  ctxMenu.classList.add('open');
+}
 
 render();
 </script>
