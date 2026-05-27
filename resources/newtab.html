@@ -147,9 +147,8 @@ body.dark .float-btn{background:rgba(50,30,90,0.9);}
 <div class="modal" id="addModal">
   <div class="modal-box">
     <div class="modal-ttl">Add Shortcut</div>
-    <input class="modal-inp" id="appName" placeholder="Name (e.g. YouTube)"/>
-    <input class="modal-inp" id="appUrl" placeholder="URL (e.g. https://youtube.com)"/>
-    <input class="modal-inp" id="appIcon" placeholder="Emoji icon (e.g. 📺)"/>
+    <input class="modal-inp" id="appName" placeholder="Name (e.g. example app)"/>
+    <input class="modal-inp" id="appUrl" placeholder="URL (e.g. https://example.com)"/>
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeAddModal()">Cancel</button>
       <button class="btn-ok" onclick="saveApp()">Add</button>
@@ -246,9 +245,8 @@ function render(){
     } else {
       // Regular app
       const ic=document.createElement('div');ic.className='app-icon';
-if(app.icon&&app.icon.length<=2){
-  // It's an emoji, show as text
-  ic.textContent=app.icon;
+if(false){
+  ic.textContent='';
 } else {
   // Try to load favicon
   const img=document.createElement('img');
@@ -346,7 +344,7 @@ function closeAddModal(){document.getElementById('addModal').classList.remove('o
 function saveApp(){
   const name=document.getElementById('appName').value.trim();
   const url=document.getElementById('appUrl').value.trim();
-  const icon=document.getElementById('appIcon').value.trim()||'🌐';
+  const icon='';
   if(!name||!url)return;
   let fullUrl=url;
   if(!/^https?:\/\//.test(fullUrl))fullUrl='https://'+fullUrl;
