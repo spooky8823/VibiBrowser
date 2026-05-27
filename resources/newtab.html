@@ -51,10 +51,11 @@ body.dark .se-select{background:rgba(34,21,69,0.95);color:var(--tx);}
 .app-add{width:56px;height:56px;border-radius:16px;border:1.5px dashed rgba(123,92,240,.35);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--pl);transition:background .15s;}
 .app-add-wrap:hover .app-add{background:var(--s2);}
 /* Folder overlay */
-.folder-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);z-index:900;align-items:center;justify-content:center;}
+.folder-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:900;align-items:center;justify-content:center;}
 .folder-overlay.open{display:flex;}
 .folder-exp{background:var(--sf);border:2px solid var(--p);border-radius:22px;padding:22px;min-width:280px;max-width:400px;box-shadow:0 0 40px rgba(123,92,240,.4);animation:popIn .25s cubic-bezier(.34,1.56,.64,1);}
-@keyframes popIn{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes popIn{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes popInFull{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
 .folder-exp-hdr{display:flex;align-items:center;gap:8px;margin-bottom:16px;}
 .folder-title{font-family:'Outfit',sans-serif;font-weight:700;font-size:15px;color:var(--tx);border:none;background:transparent;outline:none;flex:1;padding:3px 6px;border-radius:6px;}
 .folder-title:focus{background:var(--s2);}
@@ -94,6 +95,10 @@ body.dark .float-btn{background:rgba(50,30,90,0.9);}
 .vibi-promo p{font-size:12px;color:var(--tm);line-height:1.6;}
 /* Drag ghost */
 .dragging{opacity:.4;transform:scale(.95);}
+.perf-low *{transition:none !important;animation:none !important;}
+.perf-low .folder-exp{animation:none !important;}
+.perf-mid .folder-exp{animation:popIn .15s ease !important;}
+.perf-high .folder-exp{animation:popInFull .25s cubic-bezier(.34,1.56,.64,1) !important;}
 </style>
 </head>
 <body>
@@ -160,6 +165,18 @@ body.dark .float-btn{background:rgba(50,30,90,0.9);}
 </div>
 
 <script>
+
+  // Hardware detection
+(function(){
+  const mem=navigator.deviceMemory||2;
+  const cores=navigator.hardwareConcurrency||2;
+  let tier='perf-low';
+  if(mem>=8&&cores>=8)tier='perf-high';
+  else if(mem>=4&&cores>=4)tier='perf-mid';
+  document.body.classList.add(tier);
+  console.log('VibiBrowser perf tier:',tier,'| RAM:',mem,'GB | Cores:',cores);
+})();
+
 // ── CLOCK ──
 function updateClock(){
   const n=new Date();
@@ -228,7 +245,21 @@ function render(){
       el.addEventListener('click',()=>openFolder(i));
     } else {
       // Regular app
-      const ic=document.createElement('div');ic.className='app-icon';ic.textContent=app.icon||'🌐';
+      const ic=document.createElement('div');ic.className='app-icon';
+if(app.icon&&app.icon.length<=2){
+  // It's an emoji, show as text
+  ic.textContent=app.icon;
+} else {
+  // Try to load favicon
+  const img=document.createElement('img');
+  try{
+    const host=new URL(app.url).hostname;
+    img.src='https://www.google.com/s2/favicons?domain='+host+'&sz=64';
+  }catch{img.src='';}
+  img.style.cssText='width:36px;height:36px;border-radius:8px;object-fit:contain;';
+  img.onerror=()=>{ic.textContent='🌐';img.remove();};
+  ic.appendChild(img);
+}
       const nm=document.createElement('span');nm.className='app-nm';nm.textContent=app.name;
       el.appendChild(ic);el.appendChild(nm);
       el.addEventListener('click',()=>window.location.href=app.url);
@@ -286,7 +317,7 @@ function openFolder(i){
   const grid=document.getElementById('folderGrid');
   grid.innerHTML=f.items.map((a,j)=>`
     <div class="fapp" ondblclick="removeFromFolder(${j})" onclick="window.location.href='${a.url}'">
-      <div class="fapp-icon">${a.icon||'🌐'}</div>
+      <div class="fapp-icon">${a.icon&&a.icon.length<=2?a.icon:`<img src="https://www.google.com/s2/favicons?domain=${(()=>{try{return new URL(a.url).hostname}catch{return ''}})()}&sz=64" style="width:28px;height:28px;border-radius:6px" onerror="this.parentNode.textContent='🌐'">`}</div>
       <div class="fapp-name">${a.name}</div>
     </div>
   `).join('');
