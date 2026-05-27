@@ -9,6 +9,7 @@ class WebView : public QWebEngineView
 public:
     explicit WebView(QWidget *parent = nullptr);
     void setHistoryManager(HistoryManager *hm) { m_history = hm; }
+    void load(const QUrl &url);
 
 protected:
     QWebEngineView *createWindow(QWebEnginePage::WebWindowType type) override;
