@@ -239,7 +239,13 @@ function render(){
       for(let j=0;j<4;j++){
         const dot=document.createElement('div');
         dot.className='fdot';
-        dot.textContent=preview[j]?.icon||'';
+        if(preview[j]?.url){
+          const img=document.createElement('img');
+          try{const host=new URL(preview[j].url).hostname;img.src='https://www.google.com/s2/favicons?domain='+host+'&sz=64';}catch{img.src='';}
+          img.style.cssText='width:20px;height:20px;border-radius:3px;object-fit:contain;';
+          img.onerror=()=>{img.remove();dot.textContent='🌐';};
+          dot.appendChild(img);
+        }
         fIcon.appendChild(dot);
       }
       const nm=document.createElement('span');nm.className='app-nm';nm.textContent=app.name;
