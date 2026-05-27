@@ -23,9 +23,12 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    WebView* currentWebView();
+
+public slots:
+    void newTab(const QUrl &url = QUrl("vibi://newtab"));
 
 private slots:
-    void newTab(const QUrl &url = QUrl("vibi://newtab"));
     void closeTab(int index);
     void switchTab(int index);
     void navigateTo(const QString &input);
@@ -47,7 +50,6 @@ private:
     void setupTabBar();
     void setupToolBar();
     void applyTheme();
-    WebView* currentWebView();
     QString resolveUrl(const QString &input);
 
     // Layout
