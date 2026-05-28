@@ -413,12 +413,25 @@ function ctxOpen(){
   ctxMenu.dataset.mode='';
 }
 function ctxEdit(){
-  if(ctxIdx===null||apps[ctxIdx].folder)return;
-  const a=apps[ctxIdx];
-  document.getElementById('appName').value=a.name;
-  document.getElementById('appUrl').value=a.url;
-  apps.splice(ctxIdx,1);save();render();
-  openAddModal();
+  if(ctxMenu.dataset.mode==='folder'){
+    if(folderCtxIdx===null||openFolderIdx===null)return;
+    const f=apps[openFolderIdx];
+    const a=f.items[folderCtxIdx];
+    document.getElementById('appName').value=a.name;
+    document.getElementById('appUrl').value=a.url;
+    f.items.splice(folderCtxIdx,1);
+    save();render();
+    ctxMenu.dataset.mode='';
+    closeFolder();
+    openAddModal();
+  } else {
+    if(ctxIdx===null||apps[ctxIdx].folder)return;
+    const a=apps[ctxIdx];
+    document.getElementById('appName').value=a.name;
+    document.getElementById('appUrl').value=a.url;
+    apps.splice(ctxIdx,1);save();render();
+    openAddModal();
+  }
 }
 function ctxDelete(){
   if(ctxMenu.dataset.mode==='folder'){
