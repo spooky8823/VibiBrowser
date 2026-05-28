@@ -11,6 +11,11 @@
 #include <QMessageBox>
 #include <QFileInfo>
 #include <QDir>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QTimer>
+#include <QLabel>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -25,6 +30,7 @@ MainWindow::MainWindow(QWidget *parent)
     setAttribute(Qt::WA_TranslucentBackground, true);
 
     m_dlManager   = new DownloadManager(this);
+    m_netManager  = new QNetworkAccessManager(this);
     m_histManager = new HistoryManager(this);
 
     // Handle downloads from profile
@@ -312,6 +318,63 @@ void MainWindow::applyTheme()
     .arg(br)        // %5 border
     .arg(accentDk)  // %6 title bar
     );
+}
+
+void MainWindow::downloadAndInstallExtension(const QString &extId, const QString &store)
+{
+    // Build CRX download URL from Google's update server
+    QString crxUrl;
+    if (store.contains("microsoft")) {
+        crxUrl = QString("https://edge.microsoft.com/extensionwebstorebase/v1/crx?response=redirect&x=id%%3D%1%%26installsource%%3Dondemand%%26uc").arg(extId);
+    } else {
+        // CWS, Opera, Brave all use Google's CRX server
+        crxUrl = QString("https://clients2.google.com/service/update2/crx"
+                        "?response=redirect&acceptformat=crx3"
+                        "&x=id%%3D%1%%26uc&prodversion=136.0").arg(extId);
+    }
+
+    // Show installing notification
+    showNotification("Installing extension...", "Downloading from store");
+
+    auto *reply = m_netManager->get(QNetworkRequest(QUrl(crxUrl)));
+    connect(reply, &QNetworkReply::finished, this, [this, reply, extId](){
+        if(reply->error() != QNetworkReply::NoError){
+            showNotification("Install failed", reply->errorString());
+            reply->deleteLater();
+            return;
+        }
+
+        QByteArray data = reply->readAll();
+        reply->deleteLater();
+
+        // Save CRX temporarily
+        QString tmpPath = QDir::tempPath() + "/" + extId + ".crx";
+        QFile f(tmpPath);
+        if(!f.open(QIODevice::WriteOnly)){
+            showNotification("Install failed", "Could not write file");
+            return;
+        }
+        f.write(data);
+        f.close();
+
+        installExtension(tmpPath);
+    });
+}
+
+void MainWindow::showNotification(const QString &title, const QString &msg)
+{
+    // Simple toast notification in the toolbar area
+    auto *toast = new QLabel(this);
+    toast->setText("🔔 " + title + ": " + msg);
+    toast->setStyleSheet(
+        "background: rgba(123,92,240,0.95); color: white; "
+        "border-radius: 12px; padding: 10px 18px; font-size: 13px;"
+    );
+    toast->adjustSize();
+    toast->move(width()/2 - toast->width()/2, height() - toast->height() - 20);
+    toast->show();
+    toast->raise();
+    QTimer::singleShot(4000, toast, &QLabel::deleteLater);
 }
 
 void MainWindow::installExtension(const QString &crxPath)

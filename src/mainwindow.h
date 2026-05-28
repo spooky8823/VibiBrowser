@@ -12,6 +12,7 @@
 #include <QWebEngineView>
 #include <QProgressBar>
 #include <QSettings>
+#include <QNetworkAccessManager>
 
 class WebView;
 class DownloadManager;
@@ -42,6 +43,8 @@ private slots:
     void toggleDarkMode();
     void openSettings();
     void installExtension(const QString &crxPath);
+    void downloadAndInstallExtension(const QString &extId, const QString &store);
+    void showNotification(const QString &title, const QString &msg);
     void openHistory();
     void openDownloads();
 
@@ -80,6 +83,7 @@ private:
     QSettings m_settings;
 
     // Managers
-    DownloadManager *m_dlManager;
-    HistoryManager  *m_histManager;
+    DownloadManager         *m_dlManager   = nullptr;
+    HistoryManager          *m_histManager = nullptr;
+    QNetworkAccessManager   *m_netManager  = nullptr;
 };

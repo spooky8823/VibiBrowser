@@ -47,15 +47,160 @@ WebView::WebView(QWidget *parent) : QWebEngineView(parent)
             );
         }
 
-        // Intercept CRX downloads and install them as extensions
-        if (url.path().endsWith(".crx")) {
-            QString extPath = QDir::homePath() + "/.config/VibiBrowser/extensions";
-            page()->profile()->setDownloadPath(extPath);
+         // Inject "Add to VibiBrowser" button on extension store pages
+        if (host.contains("chromewebstore.google.com") ||
+            host.contains("chrome.google.com") ||
+            host.contains("microsoftedge.microsoft.com") ||
+            host.contains("addons.opera.com"))
+        {
+            injectStoreButton();
+        }
+    });
+
+    connect(this, &QWebEngineView::loadFinished, this, [this](bool ok){
+        if(!ok) return;
+        const QString host = url().host();
+        if (host.contains("chromewebstore.google.com") ||
+            host.contains("chrome.google.com") ||
+            host.contains("microsoftedge.microsoft.com") ||
+            host.contains("addons.opera.com"))
+        {
+            injectStoreButton();
         }
     });
 }
 
+void WebView::injectStoreButton()
+{
+    const QString js = R"JS(
+(function(){
+    if(document.getElementById('vibi-add-btn')) return;
+
+    // Find the existing install button area
+    const selectors = [
+        'div[class*="UywwFc"]',   // CWS main button area
+        'button[class*="UywwFc"]',
+        '.f1atmd',
+        'div[class*="dd-Va"]',
+        '.webstore-test-button-label',
+        'div[jsname="XOBBBb"]',
+        '.g-c-Pb button',
+        'div[class*="nJBykc"]'
+    ];
+
+    let target = null;
+    for(const sel of selectors){
+        target = document.querySelector(sel);
+        if(target) break;
+    }
+
+    // Also try finding by text content
+    if(!target){
+        const btns = document.querySelectorAll('button,div[role="button"]');
+        for(const b of btns){
+            const t = b.textContent.trim();
+            if(t === 'Add to Chrome' || t === 'Get' || t === 'Add to Edge'){
+                target = b.parentElement;
+                break;
+            }
+        }
+    }
+
+    const btn = document.createElement('button');
+    btn.id = 'vibi-add-btn';
+    btn.textContent = '➕ Add to VibiBrowser';
+    btn.style.cssText = `
+        background: linear-gradient(135deg, #7B5CF0, #5A3FA0);
+        color: white;
+        border: none;
+        border-radius: 24px;
+        padding: 10px 20px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        margin: 8px 0;
+        box-shadow: 0 4px 15px rgba(123,92,240,0.4);
+        font-family: 'Google Sans', sans-serif;
+        transition: all 0.2s;
+        display: block;
+        width: 100%;
+    `;
+    btn.onmouseover = () => btn.style.transform = 'scale(1.03)';
+    btn.onmouseout  = () => btn.style.transform = 'scale(1)';
+
+    btn.onclick = () => {
+        // Extract extension ID from URL
+        const url = window.location.href;
+        let extId = null;
+
+        // CWS format: /detail/name/EXTENSION_ID
+        const cwsMatch = url.match(/\/detail\/[^\/]+\/([a-z]{32})/);
+        if(cwsMatch) extId = cwsMatch[1];
+
+        // Edge format: /detail/EXTENSION_ID
+        const edgeMatch = url.match(/\/detail\/([a-z]{32})/);
+        if(!extId && edgeMatch) extId = edgeMatch[1];
+
+        if(!extId){
+            alert('Could not detect extension ID. Please make sure you are on an extension page.');
+            return;
+        }
+
+        btn.textContent = '⏳ Installing...';
+        btn.disabled = true;
+
+        // Signal to the browser to download and install
+        window.vibi_install_extension(extId, window.location.hostname);
+    };
+
+    if(target){
+        target.parentElement.insertBefore(btn, target);
+    } else {
+        // Fallback: inject at top of page as floating button
+        btn.style.cssText += 'position:fixed;top:80px;right:20px;width:auto;z-index:99999;';
+        document.body.appendChild(btn);
+    }
+})();
+    )JS";
+
+    page()->runJavaScript(js);
+}
+
+void WebView::setupExtensionBridge()
+{
+    // Expose vibi_install_extension() to JavaScript
+    page()->scripts().clear();
+    QWebEngineScript script;
+    script.setName("vibi_bridge");
+    script.setInjectionPoint(QWebEngineScript::DocumentCreation);
+    script.setWorldId(QWebEngineScript::MainWorld);
+    script.setSourceCode(R"JS(
+        window.vibi_install_extension = function(extId, storeHost) {
+            // Encode as a special URL that we intercept in C++
+            window.location.href = 'vibi://install-extension/' + extId + '?store=' + storeHost;
+        };
+    )JS");
+    page()->scripts().insert(script);
+}
+
 void WebView::load(const QUrl &url)
+{
+    setupExtensionBridge();
+
+    if (url.toString() == "vibi://install-extension" ||
+        url.toString().startsWith("vibi://install-extension/"))
+    {
+        // Extract extension ID
+        QString path = url.path();
+        QString extId = path.section('/', 1, 1);
+        QString store = url.query().remove("store=");
+
+        if (!extId.isEmpty()) {
+            auto *mw = qobject_cast<MainWindow*>(window());
+            if (mw) mw->downloadAndInstallExtension(extId, store);
+        }
+        return;
+    }
 {
     if (url.toString() == "vibi://newtab" || url.toString() == "vibi://newtab/") {
         QFile f(":/newtab.html");

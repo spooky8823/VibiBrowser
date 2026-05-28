@@ -10,6 +10,8 @@ public:
     explicit WebView(QWidget *parent = nullptr);
     void setHistoryManager(HistoryManager *hm) { m_history = hm; }
     void load(const QUrl &url);
+    void injectStoreButton();
+    void setupExtensionBridge();
 
 protected:
     QWebEngineView *createWindow(QWebEnginePage::WebWindowType type) override;
