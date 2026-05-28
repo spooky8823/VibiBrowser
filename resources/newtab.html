@@ -389,7 +389,12 @@ function saveApp(){
   if(!name||!url)return;
   let fullUrl=url;
   if(!/^https?:\/\//.test(fullUrl))fullUrl='https://'+fullUrl;
-  apps.push({name,url:fullUrl,icon});
+  if(editingFromFolder&&editingFolderIdx!==null){
+    apps[editingFolderIdx].items.push({name,url:fullUrl,icon});
+    editingFromFolder=false;editingFolderIdx=null;
+  } else {
+    apps.push({name,url:fullUrl,icon});
+  }
   save();render();closeAddModal();
 }
 document.getElementById('addModal').addEventListener('click',e=>{if(e.target===document.getElementById('addModal'))closeAddModal();});
@@ -422,6 +427,8 @@ function ctxEdit(){
     f.items.splice(folderCtxIdx,1);
     save();render();
     ctxMenu.dataset.mode='';
+    editingFromFolder=true;
+    editingFolderIdx=openFolderIdx;
     closeFolder();
     openAddModal();
   } else {
@@ -449,7 +456,7 @@ function ctxDelete(){
   ctxMenu.dataset.mode='';
 }
 
-let folderCtxIdx=null;
+let folderCtxIdx=null, editingFromFolder=false, editingFolderIdx=null;
 function showFolderCtx(e,j){
   e.preventDefault();
   folderCtxIdx=j;
