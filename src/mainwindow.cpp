@@ -18,7 +18,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Frameless window
     setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
-    setAttribute(Qt::WA_TranslucentBackground, false);
+    setAttribute(Qt::WA_TranslucentBackground, true);
 
     m_dlManager   = new DownloadManager(this);
     m_histManager = new HistoryManager(this);

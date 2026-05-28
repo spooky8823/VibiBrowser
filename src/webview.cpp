@@ -14,6 +14,10 @@ WebView::WebView(QWidget *parent) : QWebEngineView(parent)
     settings()->setAttribute(QWebEngineSettings::FullScreenSupportEnabled, true);
     settings()->setAttribute(QWebEngineSettings::ScrollAnimatorEnabled, true);
 
+    // Transparent background for liquid glass effect
+    setAttribute(Qt::WA_TranslucentBackground);
+    page()->setBackgroundColor(Qt::transparent);
+
     // Set a real user agent so Google doesn't captcha us
     page()->profile()->setHttpUserAgent(
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
