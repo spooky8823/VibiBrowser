@@ -7,6 +7,9 @@
 #include <QWebEngineDownloadRequest>
 #include <QUrl>
 #include <QRegularExpression>
+#include <QProcess>
+#include <QMessageBox>
+#include <QFileInfo>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -308,6 +311,39 @@ void MainWindow::applyTheme()
     .arg(br)        // %5 border
     .arg(accentDk)  // %6 title bar
     );
+}
+
+void MainWindow::installExtension(const QString &crxPath)
+{
+    // Unpack CRX into extensions folder
+    QString extId = QFileInfo(crxPath).baseName();
+    QString destPath = QDir::homePath() + "/.config/VibiBrowser/extensions/" + extId;
+    QDir().mkpath(destPath);
+
+    // CRX3 format: skip header and unzip the rest
+    QFile crx(crxPath);
+    if (!crx.open(QIODevice::ReadOnly)) return;
+
+    QByteArray data = crx.readAll();
+    crx.close();
+
+    // Find the ZIP magic bytes PK\x03\x04 in the CRX
+    int zipStart = data.indexOf("\x50\x4B\x03\x04");
+    if (zipStart < 0) return;
+
+    QString zipPath = destPath + "/ext.zip";
+    QFile zip(zipPath);
+    if (!zip.open(QIODevice::WriteOnly)) return;
+    zip.write(data.mid(zipStart));
+    zip.close();
+
+    // Unzip using system unzip
+    QProcess::execute("unzip", {"-o", zipPath, "-d", destPath});
+    QFile::remove(zipPath);
+
+    // Tell user to restart
+    QMessageBox::information(this, "Extension Installed",
+        "Extension installed! Please restart VibiBrowser to activate it.");
 }
 
 void MainWindow::openSettings()  { /* TODO: open settings page */ }

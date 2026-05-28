@@ -41,6 +41,7 @@ private slots:
     void reload();
     void toggleDarkMode();
     void openSettings();
+    void installExtension(const QString &crxPath);
     void openHistory();
     void openDownloads();
 
