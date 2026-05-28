@@ -10,6 +10,7 @@
 #include <QProcess>
 #include <QMessageBox>
 #include <QFileInfo>
+#include <QDir>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)

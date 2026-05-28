@@ -5,7 +5,7 @@
 
 int main(int argc, char *argv[])
 {
-    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    // Qt6: High-DPI scaling is always enabled, no attribute needed
 
 // Performance flags for low-end hardware
 // Create extensions directory if it doesn't exist
