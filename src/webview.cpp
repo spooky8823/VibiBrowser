@@ -18,7 +18,9 @@ WebView::WebView(QWidget *parent) : QWebEngineView(parent)
 
     // Transparent background for liquid glass effect
     setAttribute(Qt::WA_TranslucentBackground);
+    setAttribute(Qt::WA_NoSystemBackground);
     page()->setBackgroundColor(Qt::transparent);
+    setStyleSheet("background: transparent;");
 
     // Set a real user agent
     page()->profile()->setHttpUserAgent(
