@@ -43,9 +43,11 @@ private slots:
     void toggleDarkMode();
     void openSettings();
     void installExtension(const QString &crxPath);
-    void downloadAndInstallExtension(const QString &extId, const QString &store);
     void showNotification(const QString &title, const QString &msg);
     void openHistory();
+
+public:
+    void downloadAndInstallExtension(const QString &extId, const QString &store);
     void openDownloads();
 
 private:

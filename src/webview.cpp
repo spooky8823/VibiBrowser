@@ -4,6 +4,7 @@
 #include <QWebEngineProfile>
 #include <QWebEngineSettings>
 #include <QWebEngineScript>
+#include <QWebEngineScriptCollection>
 #include <QFile>
 #include <QDir>
 
@@ -19,7 +20,7 @@ WebView::WebView(QWidget *parent) : QWebEngineView(parent)
     setAttribute(Qt::WA_TranslucentBackground);
     page()->setBackgroundColor(Qt::transparent);
 
-    // Set a real user agent so Google doesn't captcha us
+    // Set a real user agent
     page()->profile()->setHttpUserAgent(
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
         "VibiBrowser/1.1.0 Chrome/136.0.0.0 Safari/537.36"
@@ -29,8 +30,9 @@ WebView::WebView(QWidget *parent) : QWebEngineView(parent)
         if (m_history && url.isValid() && url.scheme() != "vibi" && url.scheme() != "qrc")
             m_history->addEntry(url, title());
 
-        // Spoof user agent for extension stores so installs work
         const QString host = url.host();
+
+        // Spoof user agent for extension stores
         if (host.contains("chrome.google.com") ||
             host.contains("chromewebstore.google.com") ||
             host.contains("microsoftedge.microsoft.com") ||
@@ -45,15 +47,6 @@ WebView::WebView(QWidget *parent) : QWebEngineView(parent)
                 "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
                 "(KHTML, like Gecko) VibiBrowser/1.1.0 Chrome/136.0.0.0 Safari/537.36"
             );
-        }
-
-         // Inject "Add to VibiBrowser" button on extension store pages
-        if (host.contains("chromewebstore.google.com") ||
-            host.contains("chrome.google.com") ||
-            host.contains("microsoftedge.microsoft.com") ||
-            host.contains("addons.opera.com"))
-        {
-            injectStoreButton();
         }
     });
 
@@ -76,9 +69,8 @@ void WebView::injectStoreButton()
 (function(){
     if(document.getElementById('vibi-add-btn')) return;
 
-    // Find the existing install button area
     const selectors = [
-        'div[class*="UywwFc"]',   // CWS main button area
+        'div[class*="UywwFc"]',
         'button[class*="UywwFc"]',
         '.f1atmd',
         'div[class*="dd-Va"]',
@@ -94,7 +86,6 @@ void WebView::injectStoreButton()
         if(target) break;
     }
 
-    // Also try finding by text content
     if(!target){
         const btns = document.querySelectorAll('button,div[role="button"]');
         for(const b of btns){
@@ -129,15 +120,12 @@ void WebView::injectStoreButton()
     btn.onmouseout  = () => btn.style.transform = 'scale(1)';
 
     btn.onclick = () => {
-        // Extract extension ID from URL
         const url = window.location.href;
         let extId = null;
 
-        // CWS format: /detail/name/EXTENSION_ID
         const cwsMatch = url.match(/\/detail\/[^\/]+\/([a-z]{32})/);
         if(cwsMatch) extId = cwsMatch[1];
 
-        // Edge format: /detail/EXTENSION_ID
         const edgeMatch = url.match(/\/detail\/([a-z]{32})/);
         if(!extId && edgeMatch) extId = edgeMatch[1];
 
@@ -149,14 +137,12 @@ void WebView::injectStoreButton()
         btn.textContent = '⏳ Installing...';
         btn.disabled = true;
 
-        // Signal to the browser to download and install
         window.vibi_install_extension(extId, window.location.hostname);
     };
 
     if(target){
         target.parentElement.insertBefore(btn, target);
     } else {
-        // Fallback: inject at top of page as floating button
         btn.style.cssText += 'position:fixed;top:80px;right:20px;width:auto;z-index:99999;';
         document.body.appendChild(btn);
     }
@@ -168,15 +154,12 @@ void WebView::injectStoreButton()
 
 void WebView::setupExtensionBridge()
 {
-    // Expose vibi_install_extension() to JavaScript
-    page()->scripts().clear();
     QWebEngineScript script;
     script.setName("vibi_bridge");
     script.setInjectionPoint(QWebEngineScript::DocumentCreation);
     script.setWorldId(QWebEngineScript::MainWorld);
     script.setSourceCode(R"JS(
         window.vibi_install_extension = function(extId, storeHost) {
-            // Encode as a special URL that we intercept in C++
             window.location.href = 'vibi://install-extension/' + extId + '?store=' + storeHost;
         };
     )JS");
@@ -187,21 +170,17 @@ void WebView::load(const QUrl &url)
 {
     setupExtensionBridge();
 
-    if (url.toString() == "vibi://install-extension" ||
-        url.toString().startsWith("vibi://install-extension/"))
+    if (url.toString().startsWith("vibi://install-extension/"))
     {
-        // Extract extension ID
-        QString path = url.path();
-        QString extId = path.section('/', 1, 1);
+        QString extId = url.path().section('/', 1, 1);
         QString store = url.query().remove("store=");
-
         if (!extId.isEmpty()) {
             auto *mw = qobject_cast<MainWindow*>(window());
             if (mw) mw->downloadAndInstallExtension(extId, store);
         }
         return;
     }
-{
+
     if (url.toString() == "vibi://newtab" || url.toString() == "vibi://newtab/") {
         QFile f(":/newtab.html");
         if (f.open(QIODevice::ReadOnly)) {
@@ -210,6 +189,7 @@ void WebView::load(const QUrl &url)
         }
         return;
     }
+
     QWebEngineView::load(url);
 }
 
