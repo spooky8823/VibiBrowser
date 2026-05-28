@@ -61,6 +61,18 @@ WebView::WebView(QWidget *parent) : QWebEngineView(parent)
         }
     });
 
+    connect(this, &QWebEngineView::titleChanged, this, [this](const QString &title){
+        if(title.startsWith("VIBI_INSTALL:")){
+            QStringList parts = title.split(':');
+            if(parts.size() >= 3){
+                QString extId = parts[1];
+                QString store = parts[2];
+                auto *mw = qobject_cast<MainWindow*>(window());
+                if(mw) mw->downloadAndInstallExtension(extId, store);
+            }
+        }
+    });
+
     connect(this, &QWebEngineView::loadFinished, this, [this](bool ok){
         if(!ok) return;
         const QString host = url().host();
@@ -171,7 +183,7 @@ void WebView::setupExtensionBridge()
     script.setWorldId(QWebEngineScript::MainWorld);
     script.setSourceCode(R"JS(
         window.vibi_install_extension = function(extId, storeHost) {
-            window.location.href = 'vibi://install-extension/' + extId + '?store=' + storeHost;
+            document.title = 'VIBI_INSTALL:' + extId + ':' + storeHost;
         };
     )JS");
     page()->scripts().insert(script);
