@@ -30,6 +30,17 @@ WebView::WebView(QWidget *parent) : QWebEngineView(parent)
         if (m_history && url.isValid() && url.scheme() != "vibi" && url.scheme() != "qrc")
             m_history->addEntry(url, title());
 
+        // Catch vibi://install-extension before OS handles it
+        if (url.toString().startsWith("vibi://install-extension/")) {
+            QString extId = url.path().section('/', 1, 1);
+            QString store = url.query().remove("store=");
+            if (!extId.isEmpty()) {
+                auto *mw = qobject_cast<MainWindow*>(window());
+                if (mw) mw->downloadAndInstallExtension(extId, store);
+            }
+            return;
+        }
+
         const QString host = url.host();
 
         // Spoof user agent for extension stores
