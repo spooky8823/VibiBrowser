@@ -12,6 +12,7 @@
 #include <QWebEngineView>
 #include <QProgressBar>
 #include <QSettings>
+#include <QGraphicsBlurEffect>
 #include <QNetworkAccessManager>
 
 class WebView;
