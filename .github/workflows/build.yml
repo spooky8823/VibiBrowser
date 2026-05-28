@@ -68,56 +68,8 @@ jobs:
           path: VibiBrowser-linux.deb
           retention-days: 30
 
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4.2.2
-
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: '6.6.0'
-          host: 'windows'
-          target: 'desktop'
-          arch: 'win64_msvc2019_64'
-          modules: 'qtwebengine qtpositioning qtwebchannel'
-          cache: true
-
-      - name: Setup MSVC
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
-      - name: Build
-        shell: cmd
-        run: |
-          mkdir build
-          cd build
-          qmake ..\VibiBrowser.pro CONFIG+=release
-          nmake
-
-      - name: Deploy Qt DLLs
-        shell: cmd
-        run: |
-          mkdir deploy
-          copy build\release\VibiBrowser.exe deploy\
-          windeployqt --release --webengine deploy\VibiBrowser.exe
-
-      - name: Package into zip
-        shell: powershell
-        run: |
-          Compress-Archive -Path deploy\* -DestinationPath VibiBrowser-windows.zip
-
-      - name: Upload Windows artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: VibiBrowser-windows
-          path: VibiBrowser-windows.zip
-          retention-days: 30
-
   release:
-    needs: [build-linux, build-windows]
+    needs: [build-linux]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
@@ -126,17 +78,12 @@ jobs:
         with:
           name: VibiBrowser-linux-deb
 
-      - name: Download Windows artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: VibiBrowser-windows
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             VibiBrowser-linux.deb
-            VibiBrowser-windows.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
