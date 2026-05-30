@@ -76,37 +76,24 @@ jobs:
           EOF
           cat > deb/DEBIAN/postinst << 'EOF'
           #!/bin/bash
-          # Get the actual logged in user, not root
           REAL_USER="${SUDO_USER:-$(logname 2>/dev/null)}"
           if [ -z "$REAL_USER" ]; then
             REAL_USER=$(who | awk 'NR==1{print $1}')
           fi
           REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
-          # Copy picom config
           mkdir -p "$REAL_HOME/.config/picom"
           if [ ! -f "$REAL_HOME/.config/picom/picom.conf" ]; then
             cp /etc/vibibrowser/picom.conf "$REAL_HOME/.config/picom/picom.conf"
           fi
           chown -R "$REAL_USER:$REAL_USER" "$REAL_HOME/.config/picom"
-          # Add picom to XFCE autostart
           mkdir -p "$REAL_HOME/.config/autostart"
-          cat > "$REAL_HOME/.config/autostart/picom-vibibrowser.desktop" << 'DESKTOP'
-[Desktop Entry]
-Type=Application
-Name=Picom (VibiBrowser blur)
-Exec=picom --config /etc/vibibrowser/picom.conf
-Hidden=false
-NoDisplay=false
-X-GNOME-Autostart-enabled=true
-DESKTOP
+          printf '[Desktop Entry]\nType=Application\nName=Picom (VibiBrowser blur)\nExec=picom --config /etc/vibibrowser/picom.conf\nHidden=false\nNoDisplay=false\nX-GNOME-Autostart-enabled=true\n' > "$REAL_HOME/.config/autostart/picom-vibibrowser.desktop"
           chown "$REAL_USER:$REAL_USER" "$REAL_HOME/.config/autostart/picom-vibibrowser.desktop"
-          # Start picom now as the real user if not already running
           if ! pgrep -x picom > /dev/null; then
             su -c "DISPLAY=:0 picom --config /etc/vibibrowser/picom.conf &" "$REAL_USER" || true
           fi
           exit 0
           EOF
-          
           chmod 755 deb/DEBIAN/postinst
           fakeroot dpkg-deb --build deb VibiBrowser-linux.deb
 
@@ -126,7 +113,6 @@ DESKTOP
         uses: actions/download-artifact@v4
         with:
           name: VibiBrowser-linux-deb
-
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
