@@ -70,13 +70,36 @@ jobs:
           blur-background = true;
           blur-background-frame = true;
           blur-background-fixed = false;
+          blur-background-exclude = [
+            "class_g != 'vibibrowser'"
+          ];
           EOF
           cat > deb/DEBIAN/postinst << 'EOF'
           #!/bin/bash
-          mkdir -p ~/.config/picom
-          if [ ! -f ~/.config/picom/picom.conf ]; then
-            cp /etc/vibibrowser/picom.conf ~/.config/picom/picom.conf
+          set -e
+          # Get the actual logged in user, not root
+          REAL_USER=$(logname 2>/dev/null || echo $SUDO_USER)
+          REAL_HOME=$(eval echo ~$REAL_USER)
+          # Copy picom config
+          sudo -u $REAL_USER mkdir -p $REAL_HOME/.config/picom
+          if [ ! -f $REAL_HOME/.config/picom/picom.conf ]; then
+            cp /etc/vibibrowser/picom.conf $REAL_HOME/.config/picom/picom.conf
+            chown $REAL_USER:$REAL_USER $REAL_HOME/.config/picom/picom.conf
           fi
+          # Add picom to XFCE autostart
+          sudo -u $REAL_USER mkdir -p $REAL_HOME/.config/autostart
+          cat > $REAL_HOME/.config/autostart/picom-vibibrowser.desktop << 'DESKTOP'
+          [Desktop Entry]
+          Type=Application
+          Name=Picom (VibiBrowser blur)
+          Exec=picom --config /etc/vibibrowser/picom.conf
+          Hidden=false
+          NoDisplay=false
+          X-GNOME-Autostart-enabled=true
+          DESKTOP
+          chown $REAL_USER:$REAL_USER $REAL_HOME/.config/autostart/picom-vibibrowser.desktop
+          # Start picom now as the real user if not already running
+          sudo -u $REAL_USER DISPLAY=:0 picom --config /etc/vibibrowser/picom.conf &
           EOF
           chmod 755 deb/DEBIAN/postinst
           fakeroot dpkg-deb --build deb VibiBrowser-linux.deb
