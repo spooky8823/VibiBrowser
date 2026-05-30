@@ -7,6 +7,12 @@
 #include <QWebEngineScriptCollection>
 #include <QFile>
 #include <QDir>
+#include <QScreen>
+#include <QPixmap>
+#include <QBuffer>
+#include <QTimer>
+#include <QApplication>
+#include <QProcess>
 
 WebView::WebView(QWidget *parent) : QWebEngineView(parent)
 {
@@ -191,6 +197,32 @@ void WebView::setupExtensionBridge()
     page()->scripts().insert(script);
 }
 
+void WebView::refreshWallpaper()
+{
+    QProcess *proc = new QProcess(this);
+    connect(proc, &QProcess::finished, this, [this, proc](){
+        QString path = proc->readAllStandardOutput().trimmed();
+        proc->deleteLater();
+        if (path.isEmpty()) return;
+        path.remove("file://");
+        QPixmap wall(path);
+        if (wall.isNull()) return;
+        QByteArray arr;
+        QBuffer buf(&arr);
+        buf.open(QIODevice::WriteOnly);
+        wall.save(&buf, "JPEG", 80);
+        QString b64 = "data:image/jpeg;base64," + QString::fromLatin1(arr.toBase64());
+        page()->runJavaScript(
+            QString("document.documentElement.style.setProperty('--wall-img','url(%1)');").arg(b64)
+        );
+    });
+    proc->start("bash", {"-c",
+        "xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitorVirtual1/workspace0/last-image 2>/dev/null || "
+        "gsettings get org.gnome.desktop.background picture-uri 2>/dev/null | tr -d \"'\" || "
+        "cat ~/.config/plasma-org.kde.plasma.desktop-appletsrc 2>/dev/null | grep -m1 'Image=' | cut -d= -f2"
+    });
+}
+
 void WebView::load(const QUrl &url)
 {
     setupExtensionBridge();
@@ -212,7 +244,20 @@ void WebView::load(const QUrl &url)
             setHtml(f.readAll(), QUrl("qrc:///newtab.html"));
             f.close();
         }
+
+        // Start wallpaper refresh every 1 second
+        if (!m_wallTimer) {
+            m_wallTimer = new QTimer(this);
+            connect(m_wallTimer, &QTimer::timeout, this, &WebView::refreshWallpaper);
+            m_wallTimer->start(1000);
+        }
+        refreshWallpaper();
         return;
+    }
+
+    // Stop wallpaper timer when navigating away from newtab
+    if (m_wallTimer) {
+        m_wallTimer->stop();
     }
 
     QWebEngineView::load(url);
