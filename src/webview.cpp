@@ -238,20 +238,25 @@ void WebView::load(const QUrl &url)
         return;
     }
 
-    if (url.toString() == "vibi://newtab" || url.toString() == "vibi://newtab/") {
+if (url.toString() == "vibi://newtab" || url.toString() == "vibi://newtab/") {
         QFile f(":/newtab.html");
         if (f.open(QIODevice::ReadOnly)) {
             setHtml(f.readAll(), QUrl("qrc:///newtab.html"));
             f.close();
         }
 
-        // Start wallpaper refresh every 1 second
-        if (!m_wallTimer) {
-            m_wallTimer = new QTimer(this);
-            connect(m_wallTimer, &QTimer::timeout, this, &WebView::refreshWallpaper);
-            m_wallTimer->start(1000);
-        }
-        refreshWallpaper();
+        // Wait for page to fully load before injecting wallpaper
+        connect(this, &QWebEngineView::loadFinished, this, [this](bool ok){
+            if (!ok) return;
+            // Start wallpaper refresh every 1 second
+            if (!m_wallTimer) {
+                m_wallTimer = new QTimer(this);
+                connect(m_wallTimer, &QTimer::timeout, this, &WebView::refreshWallpaper);
+                m_wallTimer->start(1000);
+            }
+            // Small delay to ensure DOM is ready
+            QTimer::singleShot(500, this, &WebView::refreshWallpaper);
+        }, Qt::SingleShotConnection);
         return;
     }
 
