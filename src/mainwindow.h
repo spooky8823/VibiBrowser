@@ -12,6 +12,11 @@
 #include <QWebEngineView>
 #include <QProgressBar>
 #include <QSettings>
+#include <QTimer>
+#include <QScreen>
+#include <QPixmap>
+#include <QBuffer>
+#include <QPainter>
 #include <QGraphicsBlurEffect>
 #include <QNetworkAccessManager>
 
@@ -43,6 +48,9 @@ private slots:
     void reload();
     void toggleDarkMode();
     void openSettings();
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
     void installExtension(const QString &crxPath);
     void showNotification(const QString &title, const QString &msg);
     void openHistory();
@@ -89,4 +97,13 @@ private:
     DownloadManager         *m_dlManager   = nullptr;
     HistoryManager          *m_histManager = nullptr;
     QNetworkAccessManager   *m_netManager  = nullptr;
+    QTimer                  *m_wallTimer   = nullptr;
+    QPixmap                  m_desktopShot;
+    QString                  m_wallpaperB64;
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
+
+public slots:
+    void updateDesktopSnapshot();
 };

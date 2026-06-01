@@ -16,6 +16,10 @@
 #include <QNetworkRequest>
 #include <QTimer>
 #include <QLabel>
+#include <QScreen>
+#include <QPixmap>
+#include <QBuffer>
+#include <QPainter>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -42,10 +46,16 @@ MainWindow::MainWindow(QWidget *parent)
     setupUI();
     applyTheme();
 
-    m_darkMode = m_settings.value("darkMode", false).toBool();
+     m_darkMode = m_settings.value("darkMode", false).toBool();
     if (m_darkMode) toggleDarkMode();
 
     newTab();
+
+    // Screenshot desktop every 1 second for liquid glass background
+    m_wallTimer = new QTimer(this);
+    connect(m_wallTimer, &QTimer::timeout, this, &MainWindow::updateDesktopSnapshot);
+    m_wallTimer->start(1000);
+    QTimer::singleShot(500, this, &MainWindow::updateDesktopSnapshot);
 }
 
 MainWindow::~MainWindow() {}
@@ -414,3 +424,39 @@ void MainWindow::installExtension(const QString &crxPath)
 void MainWindow::openSettings()  { /* TODO: open settings page */ }
 void MainWindow::openHistory()   { /* TODO: open history page  */ }
 void MainWindow::openDownloads() { m_dlManager->showPanel(); }
+void MainWindow::updateDesktopSnapshot()
+{
+    QScreen *screen = QApplication::primaryScreen();
+    if (!screen) return;
+    QPixmap shot = screen->grabWindow(0);
+    
+    // Store as base64 for HTML
+    QByteArray arr;
+    QBuffer buf(&arr);
+    buf.open(QIODevice::WriteOnly);
+    shot.save(&buf, "JPEG", 50);
+    m_wallpaperB64 = "data:image/jpeg;base64," + QString::fromLatin1(arr.toBase64());
+    
+    // Pass to current webview
+    auto *wv = currentWebView();
+    if (wv) {
+        wv->page()->runJavaScript(
+            QString("document.documentElement.style.setProperty('--wall-img','url(%1)');").arg(m_wallpaperB64)
+        );
+    }
+    
+    // Set as window background for titlebar/toolbar blur effect
+    m_desktopShot = shot;
+    m_central->update();
+}
+void MainWindow::paintEvent(QPaintEvent *event)
+{
+    if (m_desktopShot.isNull()) {
+        QMainWindow::paintEvent(event);
+        return;
+    }
+    QPainter painter(this);
+    painter.drawPixmap(0, 0, width(), height(), m_desktopShot);
+    painter.fillRect(rect(), QColor(20, 5, 60, 140));
+    QMainWindow::paintEvent(event);
+}
