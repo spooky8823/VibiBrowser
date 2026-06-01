@@ -20,6 +20,7 @@
 #include <QPixmap>
 #include <QBuffer>
 #include <QPainter>
+#include <QX11Info>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -428,7 +429,8 @@ void MainWindow::updateDesktopSnapshot()
 {
     QScreen *screen = QApplication::primaryScreen();
     if (!screen) return;
-    QPixmap shot = screen->grabWindow(0);
+    // Grab only the desktop window (Xfce desktop = window behind everything)
+    QPixmap shot = screen->grabWindow(QX11Info::appRootWindow());
     
     // Store as base64 for HTML
     QByteArray arr;
