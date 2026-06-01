@@ -101,9 +101,6 @@ private:
     QPixmap                  m_desktopShot;
     QString                  m_wallpaperB64;
 
-protected:
-    void paintEvent(QPaintEvent *event) override;
-
 public slots:
     void updateDesktopSnapshot();
 };
