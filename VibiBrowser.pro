@@ -1,4 +1,4 @@
-QT += core gui widgets webenginewidgets webchannel network x11extras
+QT += core gui widgets webenginewidgets webchannel network
 
 CONFIG += c++17
 TARGET = VibiBrowser
