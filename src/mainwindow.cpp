@@ -20,7 +20,7 @@
 #include <QPixmap>
 #include <QBuffer>
 #include <QPainter>
-#include <QX11Info>
+#include <QThread>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -427,10 +427,12 @@ void MainWindow::openHistory()   { /* TODO: open history page  */ }
 void MainWindow::openDownloads() { m_dlManager->showPanel(); }
 void MainWindow::updateDesktopSnapshot()
 {
+    hide();
+    QThread::msleep(50);
     QScreen *screen = QApplication::primaryScreen();
-    if (!screen) return;
-    // Grab only the desktop window (Xfce desktop = window behind everything)
-    QPixmap shot = screen->grabWindow(QX11Info::appRootWindow());
+    if (!screen) { show(); return; }
+    QPixmap shot = screen->grabWindow(0);
+    show();
     
     // Store as base64 for HTML
     QByteArray arr;
