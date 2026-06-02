@@ -428,7 +428,7 @@ void MainWindow::openDownloads() { m_dlManager->showPanel(); }
 void MainWindow::updateDesktopSnapshot()
 {
     hide();
-    QThread::msleep(5);
+    QThread::msleep(0.5);
     QScreen *screen = QApplication::primaryScreen();
     if (!screen) { show(); return; }
     QPixmap shot = screen->grabWindow(0);
