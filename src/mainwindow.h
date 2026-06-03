@@ -100,6 +100,7 @@ private:
     QTimer                  *m_wallTimer   = nullptr;
     QPixmap                  m_desktopShot;
     QString                  m_wallpaperB64;
+    QString                  m_lastWallpaper;
 
 public slots:
     void updateDesktopSnapshot();

@@ -20,7 +20,6 @@
 #include <QPixmap>
 #include <QBuffer>
 #include <QPainter>
-#include <QThread>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -427,34 +426,33 @@ void MainWindow::openHistory()   { /* TODO: open history page  */ }
 void MainWindow::openDownloads() { m_dlManager->showPanel(); }
 void MainWindow::updateDesktopSnapshot()
 {
-    QScreen *screen = QApplication::primaryScreen();
-    if (!screen) return;
-    // Move window off screen temporarily to exclude it from grab
-    QPoint oldPos = pos();
-    move(-width() - 10, 0);
-    QApplication::processEvents();
-    QThread::msleep(30);
-    QPixmap shot = screen->grabWindow(0);
-    move(oldPos);
-    
-    // Store as base64 for HTML
-    QByteArray arr;
-    QBuffer buf(&arr);
-    buf.open(QIODevice::WriteOnly);
-    shot.save(&buf, "JPEG", 50);
-    m_wallpaperB64 = "data:image/jpeg;base64," + QString::fromLatin1(arr.toBase64());
-    
-    // Pass to current webview
-    auto *wv = currentWebView();
-    if (wv) {
-        wv->page()->runJavaScript(
+    QProcess *proc = new QProcess(this);
+    connect(proc, &QProcess::finished, this, [this, proc](){
+        QString path = proc->readAllStandardOutput().trimmed();
+        proc->deleteLater();
+        if (path.isEmpty()) return;
+        path.remove("file://");
+        if (path == m_lastWallpaper) return;
+        m_lastWallpaper = path;
+        QPixmap shot(path);
+        if (shot.isNull()) return;
+        QByteArray arr;
+        QBuffer buf(&arr);
+        buf.open(QIODevice::WriteOnly);
+        shot.save(&buf, "JPEG", 80);
+        m_wallpaperB64 = "data:image/jpeg;base64," + QString::fromLatin1(arr.toBase64());
+        auto *wv = currentWebView();
+        if (wv) wv->page()->runJavaScript(
             QString("document.documentElement.style.setProperty('--wall-img','url(%1)');").arg(m_wallpaperB64)
         );
-    }
-    
-    // Set as window background for titlebar/toolbar blur effect
-    m_desktopShot = shot;
-    m_central->update();
+        m_desktopShot = shot;
+        m_central->update();
+    });
+    proc->start("bash", {"-c",
+        "xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image 2>/dev/null || "
+        "gsettings get org.gnome.desktop.background picture-uri 2>/dev/null | tr -d \"'\" || "
+        "cat ~/.config/plasma-org.kde.plasma.desktop-appletsrc 2>/dev/null | grep -m1 'Image=' | cut -d= -f2"
+    });
 }
 void MainWindow::paintEvent(QPaintEvent *event)
 {
