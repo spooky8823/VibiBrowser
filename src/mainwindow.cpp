@@ -427,12 +427,15 @@ void MainWindow::openHistory()   { /* TODO: open history page  */ }
 void MainWindow::openDownloads() { m_dlManager->showPanel(); }
 void MainWindow::updateDesktopSnapshot()
 {
-    hide();
-    QThread::msleep(0.5);
     QScreen *screen = QApplication::primaryScreen();
-    if (!screen) { show(); return; }
+    if (!screen) return;
+    // Move window off screen temporarily to exclude it from grab
+    QPoint oldPos = pos();
+    move(-width() - 10, 0);
+    QApplication::processEvents();
+    QThread::msleep(30);
     QPixmap shot = screen->grabWindow(0);
-    show();
+    move(oldPos);
     
     // Store as base64 for HTML
     QByteArray arr;
