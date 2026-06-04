@@ -449,7 +449,7 @@ void MainWindow::updateDesktopSnapshot()
         m_central->update();
     });
     proc->start("bash", {"-c",
-        "xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image 2>/dev/null || "
+        "xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitorLVDS-1/workspace0/last-image 2>/dev/null || "
         "gsettings get org.gnome.desktop.background picture-uri 2>/dev/null | tr -d \"'\" || "
         "cat ~/.config/plasma-org.kde.plasma.desktop-appletsrc 2>/dev/null | grep -m1 'Image=' | cut -d= -f2"
     });
