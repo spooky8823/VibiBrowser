@@ -432,7 +432,6 @@ void MainWindow::updateDesktopSnapshot()
         proc->deleteLater();
         if (path.isEmpty()) return;
         path.remove("file://");
-        if (path == m_lastWallpaper) return;
         m_lastWallpaper = path;
         QPixmap shot(path);
         if (shot.isNull()) return;
